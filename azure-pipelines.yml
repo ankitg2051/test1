@@ -13,10 +13,13 @@ stages:
           inputs:
             terraformVersion: 'latest'
         - task: TerraformTask@5
+          displayName: Terraform Init
           inputs:
             provider: 'azurerm'
             command: 'init'
+            workingDirectory: '$(System.DefaultWorkingDirectory)'
             backendServiceArm: 'azure-service-connection-new'
+            backendAzureRmResourceGroupName: 'Common_RG'
             backendAzureRmStorageAccountName: 'commonstgoct2026'
             backendAzureRmContainerName: 'contstore'
             backendAzureRmKey: 'microservice-infra.tfstate'
