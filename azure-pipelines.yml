@@ -1,8 +1,7 @@
 trigger:
 - main
 
-pool:
-  vmImage: sep-agent
+pool: sep-agent
 
 stages:
   - stage: terraform
