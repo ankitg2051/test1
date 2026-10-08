@@ -1,0 +1,36 @@
+trigger:
+- main
+
+pool:
+  vmImage: sep-agent
+
+stages:
+  - stage: terraform
+    jobs:
+      - job: CI
+        steps:
+        - task: TerraformInstaller@1
+          displayName: terraform_install
+          inputs:
+            terraformVersion: 'latest'
+        - task: TerraformTask@5
+          inputs:
+            provider: 'azurerm'
+            command: 'init'
+            backendServiceArm: 'azure-service-connection-new'
+            backendAzureRmStorageAccountName: 'commonstgoct2026'
+            backendAzureRmContainerName: 'contstore'
+            backendAzureRmKey: 'microservice-infra.tfstate'
+
+        - task: TerraformTask@5
+          inputs:
+            provider: 'azurerm'
+            command: 'plan'
+            environmentServiceNameAzureRM: 'azure-service-connection-new'
+
+        - task: TerraformTask@5
+          inputs:
+            provider: 'azurerm'
+            command: 'apply'
+            commandOptions: '--auto-approve'
+            environmentServiceNameAzureRM: 'azure-service-connection-new'
