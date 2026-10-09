@@ -12,9 +12,7 @@ terraform {
     key                  = "microservice-infra.tfstate"
   }
 }
-
-
-
+#test
 provider "azurerm" {
  features {}
 }
