@@ -3,9 +3,18 @@ trigger:
 
 pool: sep-agent
 
+variables:
+  ServiceConnection: 'azure-service-connection-new'
+  StorageAccount: 'commonstgoct2026'
+  Container: 'contstore'
+  
+
 stages:
   - stage: Dev_stage
     displayName: Dev_stage
+    variables:
+      DevEnv: '$(System.DefaultWorkingDirectory)/env/dev'      
+
     jobs:
       - job: Dev_plan
         steps:
@@ -17,17 +26,17 @@ stages:
           inputs:
             provider: 'azurerm'
             command: 'init'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/env/dev'
-            backendServiceArm: 'azure-service-connection-new'
-            backendAzureRmStorageAccountName: 'commonstgoct2026'
-            backendAzureRmContainerName: 'contstore'
+            workingDirectory: '$(DevEnv)'
+            backendServiceArm: '$(ServiceConnection)'
+            backendAzureRmStorageAccountName: '$(StorageAccount)'
+            backendAzureRmContainerName: '$(Container)'
             backendAzureRmKey: 'dev.tfstate'
         - task: TerraformTask@5
           inputs:
             provider: 'azurerm'
             command: 'plan'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/env/dev'
-            environmentServiceNameAzureRM: 'azure-service-connection-new'
+            workingDirectory: '$(DevEnv)'
+            environmentServiceNameAzureRM: '$(ServiceConnection)'
 
       - job: Dev_approval
         dependsOn: Dev_plan
@@ -49,30 +58,33 @@ stages:
           inputs:
             provider: 'azurerm'
             command: 'init'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/env/dev'
-            backendServiceArm: 'azure-service-connection-new'
-            backendAzureRmStorageAccountName: 'commonstgoct2026'
-            backendAzureRmContainerName: 'contstore'
+            workingDirectory: '$(DevEnv)'
+            backendServiceArm: '$(ServiceConnection)'
+            backendAzureRmStorageAccountName: '$(StorageAccount)'
+            backendAzureRmContainerName: '$(Container)'
             backendAzureRmKey: 'dev.tfstate'
         - task: TerraformTask@5
           inputs:
             provider: 'azurerm'
             command: 'plan'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/env/dev'
-            environmentServiceNameAzureRM: 'azure-service-connection-new'
+            workingDirectory: '$(DevEnv)'
+            environmentServiceNameAzureRM: '$(ServiceConnection)'
         - task: TerraformTask@5
           displayName: dev terraform apply 
           inputs:
             provider: 'azurerm'
             command: 'apply'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/env/dev'
+            workingDirectory: '$(DevEnv)'
             commandOptions: '--auto-approve'
-            environmentServiceNameAzureRM: 'azure-service-connection-new'
+            environmentServiceNameAzureRM: '$(ServiceConnection)'
 
   - stage: QA_stage
     dependsOn: Dev_stage
     condition: succeeded()
     displayName: QA_stage
+    variables:
+      QaEnv: '$(System.DefaultWorkingDirectory)/env/qa'    
+
     jobs:
       - job: QA_plan
         steps:
@@ -84,17 +96,17 @@ stages:
           inputs:
             provider: 'azurerm'
             command: 'init'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/env/qa'
-            backendServiceArm: 'azure-service-connection-new'
-            backendAzureRmStorageAccountName: 'commonstgoct2026'
-            backendAzureRmContainerName: 'contstore'
+            workingDirectory: '$(QaEnv)'
+            backendServiceArm: '$(ServiceConnection)'
+            backendAzureRmStorageAccountName: '$(StorageAccount)'
+            backendAzureRmContainerName: '$(Container)'
             backendAzureRmKey: 'qa.tfstate'
         - task: TerraformTask@5
           inputs:
             provider: 'azurerm'
             command: 'plan'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/env/qa'
-            environmentServiceNameAzureRM: 'azure-service-connection-new'
+            workingDirectory: '$(QaEnv)'
+            environmentServiceNameAzureRM: '$(ServiceConnection)'
 
       - job: QA_approval
         dependsOn: QA_plan
@@ -116,30 +128,33 @@ stages:
           inputs:
             provider: 'azurerm'
             command: 'init'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/env/qa'
-            backendServiceArm: 'azure-service-connection-new'
-            backendAzureRmStorageAccountName: 'commonstgoct2026'
-            backendAzureRmContainerName: 'contstore'
+            workingDirectory: '$(QaEnv)'
+            backendServiceArm: '$(ServiceConnection)'
+            backendAzureRmStorageAccountName: '$(StorageAccount)'
+            backendAzureRmContainerName: '$(Container)'
             backendAzureRmKey: 'qa.tfstate'
         - task: TerraformTask@5
           inputs:
             provider: 'azurerm'
             command: 'plan'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/env/qa'
-            environmentServiceNameAzureRM: 'azure-service-connection-new'
+            workingDirectory: '$(QaEnv)'
+            environmentServiceNameAzureRM: '$(ServiceConnection)'
         - task: TerraformTask@5
           displayName: qa terraform apply 
           inputs:
             provider: 'azurerm'
             command: 'apply'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/env/qa'
+            workingDirectory: '$(QaEnv)'
             commandOptions: '--auto-approve'
-            environmentServiceNameAzureRM: 'azure-service-connection-new'
+            environmentServiceNameAzureRM: '$(ServiceConnection)'
 
   - stage: Prod_stage
     dependsOn: QA_Stage
     condition: succeeded()
     displayName: Pord_stage
+    variables:
+      ProdEnv: '$(System.DefaultWorkingDirectory)/env/prod'
+
     jobs:
       - job: Prod_plan
         steps:
@@ -151,17 +166,17 @@ stages:
           inputs:
             provider: 'azurerm'
             command: 'init'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/env/prod'
-            backendServiceArm: 'azure-service-connection-new'
-            backendAzureRmStorageAccountName: 'commonstgoct2026'
-            backendAzureRmContainerName: 'contstore'
+            workingDirectory: '$(ProdEnv)'
+            backendServiceArm: '$(ServiceConnection)'
+            backendAzureRmStorageAccountName: '$(StorageAccount)'
+            backendAzureRmContainerName: '$(Container)'
             backendAzureRmKey: 'prod.tfstate'
         - task: TerraformTask@5
           inputs:
             provider: 'azurerm'
             command: 'plan'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/env/prod'
-            environmentServiceNameAzureRM: 'azure-service-connection-new'
+            workingDirectory: '$(ProdEnv)'
+            environmentServiceNameAzureRM: '$(ServiceConnection)'
 
       - job: Prod_approval
         dependsOn: Prod_plan
@@ -183,22 +198,22 @@ stages:
           inputs:
             provider: 'azurerm'
             command: 'init'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/env/prod'
-            backendServiceArm: 'azure-service-connection-new'
-            backendAzureRmStorageAccountName: 'commonstgoct2026'
-            backendAzureRmContainerName: 'contstore'
+            workingDirectory: '$(ProdEnv)'
+            backendServiceArm: '$(ServiceConnection)'
+            backendAzureRmStorageAccountName: '$(StorageAccount)'
+            backendAzureRmContainerName: '$(Container)'
             backendAzureRmKey: 'prod.tfstate'
         - task: TerraformTask@5
           inputs:
             provider: 'azurerm'
             command: 'plan'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/env/prod'
-            environmentServiceNameAzureRM: 'azure-service-connection-new'
+            workingDirectory: '$(ProdEnv)'
+            environmentServiceNameAzureRM: '$(ServiceConnection)'
         - task: TerraformTask@5
           displayName: prod terraform apply 
           inputs:
             provider: 'azurerm'
             command: 'apply'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/env/prod'
+            workingDirectory: '$(ProdEnv)'
             commandOptions: '--auto-approve'
-            environmentServiceNameAzureRM: 'azure-service-connection-new'
+            environmentServiceNameAzureRM: '$(ServiceConnection)'
