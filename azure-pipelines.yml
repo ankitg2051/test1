@@ -4,35 +4,30 @@ trigger:
 pool: sep-agent
 
 stages:
-  - stage: terraform
+  - stage: Dev_stage
+    displayName: Dev_stage
     jobs:
-      - job: CI
+      - job: Dev_plan
         steps:
         - task: TerraformInstaller@1
-          displayName: terraform_install
+          displayName: terraform install
           inputs:
             terraformVersion: 'latest'
         - task: TerraformTask@5
-          displayName: Terraform Init
+          displayName: teraform init
           inputs:
             provider: 'azurerm'
             command: 'init'
-            workingDirectory: '$(System.DefaultWorkingDirectory)'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/env/dev'
             backendServiceArm: 'azure-service-connection-new'
-            backendAzureRmResourceGroupName: 'Common_RG'
             backendAzureRmStorageAccountName: 'commonstgoct2026'
             backendAzureRmContainerName: 'contstore'
-            backendAzureRmKey: 'microservice-infra.tfstate'
+            backendAzureRmKey: 'dev.tfstate'
 
         - task: TerraformTask@5
+          displayName: terraform plan
           inputs:
             provider: 'azurerm'
             command: 'plan'
-            environmentServiceNameAzureRM: 'azure-service-connection-new'
-
-        - task: TerraformTask@5
-          inputs:
-            provider: 'azurerm'
-            command: 'apply'
-            commandOptions: '--auto-approve'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/env/dev'
             environmentServiceNameAzureRM: 'azure-service-connection-new'
