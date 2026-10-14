@@ -10,11 +10,11 @@ stages:
       - job: Dev_plan
         steps:
         - task: TerraformInstaller@1
-          displayName: terraform install
+          displayName: terraform_install
           inputs:
             terraformVersion: 'latest'
         - task: TerraformTask@5
-          displayName: teraform init
+          displayName: Terraform Init
           inputs:
             provider: 'azurerm'
             command: 'init'
@@ -24,6 +24,7 @@ stages:
             backendAzureRmContainerName: 'contstore'
             backendAzureRmKey: 'dev.tfstate'
 
+        - 
         - task: TerraformTask@5
           displayName: terraform plan
           inputs:
