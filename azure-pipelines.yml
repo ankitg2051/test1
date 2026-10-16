@@ -19,10 +19,11 @@ stages:
       - job: Dev_plan
         steps:
         - task: TerraformInstaller@1
-          displayName: terraform init
+          displayName: terraform install
           inputs:
             terraformVersion: 'latest'
         - task: TerraformTask@5
+          displayName: terraform init
           inputs:
             provider: 'azurerm'
             command: 'init'
@@ -32,11 +33,19 @@ stages:
             backendAzureRmContainerName: '$(Container)'
             backendAzureRmKey: 'dev.tfstate'
         - task: TerraformTask@5
+          displayName: terraform plan
           inputs:
             provider: 'azurerm'
             command: 'plan'
             workingDirectory: '$(DevEnv)'
+            commandOptions: '-out=tfplan'
             environmentServiceNameAzureRM: '$(ServiceConnection)'
+
+        - task: PublishPipelineArtifact@1
+          inputs:
+            targetPath: '$(DevEnv)/tfplan'
+            artifact: 'dev-plan'
+            publishLocation: 'pipeline'
 
       - job: Dev_approval
         dependsOn: Dev_plan
@@ -55,6 +64,7 @@ stages:
           inputs:
             terraformVersion: 'latest'
         - task: TerraformTask@5
+          displayName: terraform init
           inputs:
             provider: 'azurerm'
             command: 'init'
@@ -63,19 +73,19 @@ stages:
             backendAzureRmStorageAccountName: '$(StorageAccount)'
             backendAzureRmContainerName: '$(Container)'
             backendAzureRmKey: 'dev.tfstate'
-        - task: TerraformTask@5
+
+        - task: DownloadPipelineArtifact@2
           inputs:
-            provider: 'azurerm'
-            command: 'plan'
-            workingDirectory: '$(DevEnv)'
-            environmentServiceNameAzureRM: '$(ServiceConnection)'
+            buildType: 'current'
+            artifactName: 'dev-plan'
+            targetPath: '$(Pipeline.Workspace)/plan-dev'
         - task: TerraformTask@5
           displayName: dev terraform apply 
           inputs:
             provider: 'azurerm'
             command: 'apply'
             workingDirectory: '$(DevEnv)'
-            commandOptions: '--auto-approve'
+            commandOptions: '$(Pipeline.Workspace)/plan-dev/tfplan'
             environmentServiceNameAzureRM: '$(ServiceConnection)'
 
   - stage: QA_stage
@@ -102,11 +112,19 @@ stages:
             backendAzureRmContainerName: '$(Container)'
             backendAzureRmKey: 'qa.tfstate'
         - task: TerraformTask@5
+          displayName: terraform plan
           inputs:
             provider: 'azurerm'
             command: 'plan'
             workingDirectory: '$(QaEnv)'
+            commandOptions: '-out=tfplan1'
             environmentServiceNameAzureRM: '$(ServiceConnection)'
+
+        - task: PublishPipelineArtifact@1
+          inputs:
+            targetPath: '$(QaEnv)/tfplan1'
+            artifact: 'qa-plan'
+            publishLocation: 'pipeline'
 
       - job: QA_approval
         dependsOn: QA_plan
@@ -121,10 +139,11 @@ stages:
         dependsOn: QA_approval
         steps:
         - task: TerraformInstaller@1
-          displayName: terraform init
+          displayName: terraform install
           inputs:
             terraformVersion: 'latest'
         - task: TerraformTask@5
+          displayName: terraform init
           inputs:
             provider: 'azurerm'
             command: 'init'
@@ -133,19 +152,20 @@ stages:
             backendAzureRmStorageAccountName: '$(StorageAccount)'
             backendAzureRmContainerName: '$(Container)'
             backendAzureRmKey: 'qa.tfstate'
-        - task: TerraformTask@5
+
+        - task: DownloadPipelineArtifact@2
           inputs:
-            provider: 'azurerm'
-            command: 'plan'
-            workingDirectory: '$(QaEnv)'
-            environmentServiceNameAzureRM: '$(ServiceConnection)'
+            buildType: 'current'
+            artifactName: 'qa-plan'
+            targetPath: '$(Pipeline.Workspace)/plan-qa'
+
         - task: TerraformTask@5
           displayName: qa terraform apply 
           inputs:
             provider: 'azurerm'
             command: 'apply'
             workingDirectory: '$(QaEnv)'
-            commandOptions: '--auto-approve'
+            commandOptions: '$(Pipeline.Workspace)/plan-qa/tfplan1'
             environmentServiceNameAzureRM: '$(ServiceConnection)'
 
   - stage: Prod_stage
@@ -159,10 +179,11 @@ stages:
       - job: Prod_plan
         steps:
         - task: TerraformInstaller@1
-          displayName: terraform init
+          displayName: terraform install
           inputs:
             terraformVersion: 'latest'
         - task: TerraformTask@5
+          displayName: terraform init
           inputs:
             provider: 'azurerm'
             command: 'init'
@@ -172,11 +193,19 @@ stages:
             backendAzureRmContainerName: '$(Container)'
             backendAzureRmKey: 'prod.tfstate'
         - task: TerraformTask@5
+          displayName: terraform plan
           inputs:
             provider: 'azurerm'
             command: 'plan'
             workingDirectory: '$(ProdEnv)'
+            commandOptions: '-out=tfplan2'
             environmentServiceNameAzureRM: '$(ServiceConnection)'
+
+        - task: PublishPipelineArtifact@1
+          inputs:
+            targetPath: '$(ProdEnv)/tfplan2'
+            artifact: 'prod-plan'
+            publishLocation: 'pipeline'
 
       - job: Prod_approval
         dependsOn: Prod_plan
@@ -191,10 +220,11 @@ stages:
         dependsOn: Prod_approval
         steps:
         - task: TerraformInstaller@1
-          displayName: terraform init
+          displayName: terraform install
           inputs:
             terraformVersion: 'latest'
         - task: TerraformTask@5
+          displayName: terraform init
           inputs:
             provider: 'azurerm'
             command: 'init'
@@ -203,17 +233,17 @@ stages:
             backendAzureRmStorageAccountName: '$(StorageAccount)'
             backendAzureRmContainerName: '$(Container)'
             backendAzureRmKey: 'prod.tfstate'
-        - task: TerraformTask@5
+
+        - task: DownloadPipelineArtifact@2
           inputs:
-            provider: 'azurerm'
-            command: 'plan'
-            workingDirectory: '$(ProdEnv)'
-            environmentServiceNameAzureRM: '$(ServiceConnection)'
+            buildType: 'current'
+            artifactName: 'prod-plan'
+            targetPath: '$(Pipeline.Workspace)/plan-prod'
         - task: TerraformTask@5
-          displayName: prod terraform apply 
+          displayName: prod terraform apply   
           inputs:
             provider: 'azurerm'
             command: 'apply'
             workingDirectory: '$(ProdEnv)'
-            commandOptions: '--auto-approve'
+            commandOptions: '$(Pipeline.Workspace)/plan-prod/tfplan2'
             environmentServiceNameAzureRM: '$(ServiceConnection)'
