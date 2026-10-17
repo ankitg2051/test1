@@ -1,6 +1,6 @@
 rgs = {
   "rg1" = {
-    name = "ankit-rg"
+    name = "ankit-rggg"
     location = "East US"
 
   }
