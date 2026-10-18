@@ -1,0 +1,60 @@
+
+parameters:
+- name: workingDirectory
+  type: string
+
+- name: backendKey
+  type: string
+
+- name: serviceConnection
+  type: string
+
+- name: storageAccount
+  type: string
+
+- name: container
+  type: string
+
+- name: artifactName
+  type: string
+
+- name: targetPath
+  type: string
+
+- name: envv
+  type: string
+
+- name: commandOptions
+  type: string
+
+steps:
+- task: TerraformInstaller@1
+  displayName: Terraform install
+  inputs:
+    terraformVersion: 'latest'
+
+- task: TerraformTask@5
+  displayName: terraform init
+  inputs:
+    provider: 'azurerm'
+    command: 'init'
+    workingDirectory: '${{ parameters.workingDirectory }}'
+    backendServiceArm: '${{ parameters.serviceConnection }}'
+    backendAzureRmStorageAccountName: '${{ parameters.storageAccount }}'
+    backendAzureRmContainerName: '${{ parameters.container }}'
+    backendAzureRmKey: '${{ parameters.backendKey }}'
+
+- task: DownloadPipelineArtifact@2
+  inputs:
+    buildType: 'current'
+    artifactName: '${{ parameters.artifactName }}'
+    targetPath: '${{ parameters.targetPath }}'
+
+- task: TerraformTask@5
+  displayName: '${{ parameters.envv }}' terraform apply
+  inputs:
+    provider: 'azurerm'
+    command: 'apply'
+    workingDirectory: '${{ parameters.workingDirectory }}'
+    commandOptions: '${{ parameters.commandOptions }}'
+    environmentServiceNameAzureRM: '${{ parameters.serviceConnection }}'
