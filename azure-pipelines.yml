@@ -51,7 +51,6 @@ stages:
         envv: 'dev'
         commandOptions: '$(Pipeline.Workspace)/plan-dev/tfplan'
 
-
 - stage: QA_stage
   dependsOn: Dev_stage
   condition: succeeded()

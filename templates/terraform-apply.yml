@@ -51,7 +51,7 @@ steps:
     targetPath: '${{ parameters.targetPath }}'
 
 - task: TerraformTask@5
-  displayName: '${{ parameters.envv }}' terraform apply
+  displayName: '${{ parameters.envv }} terraform apply'
   inputs:
     provider: 'azurerm'
     command: 'apply'
