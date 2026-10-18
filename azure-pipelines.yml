@@ -13,19 +13,18 @@ stages:
 - stage: Dev_stage
   displayName: Dev_stage
   variables:
-    DevEnv: '$(System.DefaultWorkingDirectory)/env/dev'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/env/dev'
+    backendKey: 'dev.tfstate'
+    artifactName: 'dev-plan'  
 
   jobs:
   - job: Dev_plan
     steps:
     - template: templates/terraform-plan.yml
       parameters:
-        workingDirectory: '$(DevEnv)'
-        backendKey: 'dev.tfstate'
         serviceConnection: '$(ServiceConnection)'
         storageAccount: '$(StorageAccount)'
         container: '$(Container)'
-        artifactName: 'dev-plan'
 
   - job: Dev_approval
     dependsOn: Dev_plan
@@ -41,12 +40,9 @@ stages:
     steps:
     - template: templates/terraform-apply.yml
       parameters:
-        workingDirectory: '$(DevEnv)'
-        backendKey: 'dev.tfstate'
         serviceConnection: '$(ServiceConnection)'
         storageAccount: '$(StorageAccount)'
         container: '$(Container)'
-        artifactName: 'dev-plan'
         targetPath: '$(Pipeline.Workspace)/plan-dev'
         envv: 'dev'
         commandOptions: '$(Pipeline.Workspace)/plan-dev/tfplan'
