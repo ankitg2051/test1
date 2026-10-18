@@ -1,0 +1,52 @@
+
+parameters:
+- name: workingDirectory
+  type: string
+
+- name: backendKey
+  type: string
+
+- name: serviceConnection
+  type: string
+
+- name: storageAccount
+  type: string
+
+- name: container
+  type: string
+
+- name: artifactName
+  type: string
+
+steps:
+- task: TerraformInstaller@1
+  displayName: 'Install Terraform'
+  inputs:
+    terraformVersion: 'latest'
+
+- task: TerraformTask@5
+  displayName: 'Terraform Init'
+  inputs:
+    provider: 'azurerm'
+    command: 'init'
+    workingDirectory: '${{ parameters.workingDirectory }}'
+    backendServiceArm: '${{ parameters.serviceConnection }}'
+    backendAzureRmStorageAccountName: '${{ parameters.storageAccount }}'
+    backendAzureRmContainerName: '${{ parameters.container }}'
+    backendAzureRmKey: '${{ parameters.backendKey }}'
+
+- task: TerraformTask@5
+  displayName: 'Terraform Plan'
+  inputs:
+    provider: 'azurerm'
+    command: 'plan'
+    workingDirectory: '${{ parameters.workingDirectory }}'
+    commandOptions: '-out=tfplan'
+    environmentServiceNameAzureRM: '${{ parameters.serviceConnection }}'
+
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish Terraform Plan'
+  inputs:
+    targetPath: '${{ parameters.workingDirectory }}/tfplan'
+    artifact: '${{ parameters.artifactName }}'
+    publishLocation: 'pipeline'

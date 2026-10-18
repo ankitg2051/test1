@@ -1,3 +1,4 @@
+
 trigger:
 - main
 
@@ -7,225 +8,188 @@ variables:
   ServiceConnection: 'azure-service-connection-new'
   StorageAccount: 'commonstgoct2026'
   Container: 'contstore'
-  
 
 stages:
-  - stage: Dev_stage
-    displayName: Dev_stage
-    variables:
-      DevEnv: '$(System.DefaultWorkingDirectory)/env/dev'      
+- stage: Dev_stage
+  displayName: Dev_stage
+  variables:
+    DevEnv: '$(System.DefaultWorkingDirectory)/env/dev'
 
-    jobs:
-      - job: Dev_plan
-        steps:
-        - template: templates/terraform-init.yml
-        - task: TerraformTask@5
-          displayName: terraform init
-          inputs:
-            provider: 'azurerm'
-            command: 'init'
-            workingDirectory: '$(DevEnv)'
-            backendServiceArm: '$(ServiceConnection)'
-            backendAzureRmStorageAccountName: '$(StorageAccount)'
-            backendAzureRmContainerName: '$(Container)'
-            backendAzureRmKey: 'dev.tfstate'
-        - task: TerraformTask@5
-          displayName: terraform plan
-          inputs:
-            provider: 'azurerm'
-            command: 'plan'
-            workingDirectory: '$(DevEnv)'
-            commandOptions: '-out=tfplan'
-            environmentServiceNameAzureRM: '$(ServiceConnection)'
+  jobs:
+  - job: Dev_plan
+    steps:
+    - template: templates/terraform-plan.yml
+      parameters:
+        workingDirectory: '$(DevEnv)'
+        backendKey: 'dev.tfstate'
+        serviceConnection: '$(ServiceConnection)'
+        storageAccount: '$(StorageAccount)'
+        container: '$(Container)'
+        artifactName: 'dev-plan'
 
-        - task: PublishPipelineArtifact@1
-          inputs:
-            targetPath: '$(DevEnv)/tfplan'
-            artifact: 'dev-plan'
-            publishLocation: 'pipeline'
+  - job: Dev_approval
+    dependsOn: Dev_plan
+    pool: server
+    steps:
+    - task: ManualValidation@1
+      displayName: dev validation
+      inputs:
+        notifyUsers: 'ankitg.2051@gmail.com'
 
-      - job: Dev_approval
-        dependsOn: Dev_plan
-        pool: server
-        steps:
-          - task: ManualValidation@1
-            displayName: dev validation
-            inputs:
-              notifyUsers: 'ankitg.2051@gmail.com'
+  - job: Dev_apply
+    dependsOn: Dev_approval
+    steps:
+    - task: TerraformInstaller@1
+      displayName: Terraform install
+      inputs:
+        terraformVersion: 'latest'
 
-      - job: Dev_apply
-        dependsOn: Dev_approval
-        steps:
-        - template: templates/terraform-init.yml
-        - task: TerraformTask@5
-          displayName: terraform init
-          inputs:
-            provider: 'azurerm'
-            command: 'init'
-            workingDirectory: '$(DevEnv)'
-            backendServiceArm: '$(ServiceConnection)'
-            backendAzureRmStorageAccountName: '$(StorageAccount)'
-            backendAzureRmContainerName: '$(Container)'
-            backendAzureRmKey: 'dev.tfstate'
+    - task: TerraformTask@5
+      displayName: terraform init
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '$(DevEnv)'
+        backendServiceArm: '$(ServiceConnection)'
+        backendAzureRmStorageAccountName: '$(StorageAccount)'
+        backendAzureRmContainerName: '$(Container)'
+        backendAzureRmKey: 'dev.tfstate'
 
-        - task: DownloadPipelineArtifact@2
-          inputs:
-            buildType: 'current'
-            artifactName: 'dev-plan'
-            targetPath: '$(Pipeline.Workspace)/plan-dev'
-        - task: TerraformTask@5
-          displayName: dev terraform apply 
-          inputs:
-            provider: 'azurerm'
-            command: 'apply'
-            workingDirectory: '$(DevEnv)'
-            commandOptions: '$(Pipeline.Workspace)/plan-dev/tfplan'
-            environmentServiceNameAzureRM: '$(ServiceConnection)'
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        buildType: 'current'
+        artifactName: 'dev-plan'
+        targetPath: '$(Pipeline.Workspace)/plan-dev'
 
-  - stage: QA_stage
-    dependsOn: Dev_stage
-    condition: succeeded()
-    displayName: QA_stage
-    variables:
-      QaEnv: '$(System.DefaultWorkingDirectory)/env/qa'    
+    - task: TerraformTask@5
+      displayName: dev terraform apply
+      inputs:
+        provider: 'azurerm'
+        command: 'apply'
+        workingDirectory: '$(DevEnv)'
+        commandOptions: '$(Pipeline.Workspace)/plan-dev/tfplan'
+        environmentServiceNameAzureRM: '$(ServiceConnection)'
 
-    jobs:
-      - job: QA_plan
-        steps:
-        - template: templates/terraform-init.yml
-        - task: TerraformTask@5
-          inputs:
-            provider: 'azurerm'
-            command: 'init'
-            workingDirectory: '$(QaEnv)'
-            backendServiceArm: '$(ServiceConnection)'
-            backendAzureRmStorageAccountName: '$(StorageAccount)'
-            backendAzureRmContainerName: '$(Container)'
-            backendAzureRmKey: 'qa.tfstate'
-        - task: TerraformTask@5
-          displayName: terraform plan
-          inputs:
-            provider: 'azurerm'
-            command: 'plan'
-            workingDirectory: '$(QaEnv)'
-            commandOptions: '-out=tfplan'
-            environmentServiceNameAzureRM: '$(ServiceConnection)'
+- stage: QA_stage
+  dependsOn: Dev_stage
+  condition: succeeded()
+  displayName: QA_stage
+  variables:
+    QaEnv: '$(System.DefaultWorkingDirectory)/env/qa'
 
-        - task: PublishPipelineArtifact@1
-          inputs:
-            targetPath: '$(QaEnv)/tfplan'
-            artifact: 'qa-plan'
-            publishLocation: 'pipeline'
+  jobs:
+  - job: QA_plan
+    steps:
+    - template: templates/terraform-plan.yml
+      parameters:
+        workingDirectory: '$(QaEnv)'
+        backendKey: 'qa.tfstate'
+        serviceConnection: '$(ServiceConnection)'
+        storageAccount: '$(StorageAccount)'
+        container: '$(Container)'
+        artifactName: 'qa-plan'
 
-      - job: QA_approval
-        dependsOn: QA_plan
-        pool: server
-        steps:
-          - task: ManualValidation@1
-            displayName: qa validation
-            inputs:
-              notifyUsers: 'ankitg.2051@gmail.com'
+  - job: QA_approval
+    dependsOn: QA_plan
+    pool: server
+    steps:
+    - task: ManualValidation@1
+      displayName: qa validation
+      inputs:
+        notifyUsers: 'ankitg.2051@gmail.com'
 
-      - job: QA_apply
-        dependsOn: QA_approval
-        steps:
-        - template: templates/terraform-init.yml        
-        - task: TerraformTask@5
-          displayName: terraform init
-          inputs:
-            provider: 'azurerm'
-            command: 'init'
-            workingDirectory: '$(QaEnv)'
-            backendServiceArm: '$(ServiceConnection)'
-            backendAzureRmStorageAccountName: '$(StorageAccount)'
-            backendAzureRmContainerName: '$(Container)'
-            backendAzureRmKey: 'qa.tfstate'
+  - job: QA_apply
+    dependsOn: QA_approval
+    steps:
+    - task: TerraformInstaller@1
+      displayName: Terraform install
+      inputs:
+        terraformVersion: 'latest'
 
-        - task: DownloadPipelineArtifact@2
-          inputs:
-            buildType: 'current'
-            artifactName: 'qa-plan'
-            targetPath: '$(Pipeline.Workspace)/plan-qa'
+    - task: TerraformTask@5
+      displayName: terraform init
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '$(QaEnv)'
+        backendServiceArm: '$(ServiceConnection)'
+        backendAzureRmStorageAccountName: '$(StorageAccount)'
+        backendAzureRmContainerName: '$(Container)'
+        backendAzureRmKey: 'qa.tfstate'
 
-        - task: TerraformTask@5
-          displayName: qa terraform apply 
-          inputs:
-            provider: 'azurerm'
-            command: 'apply'
-            workingDirectory: '$(QaEnv)'
-            commandOptions: '$(Pipeline.Workspace)/plan-qa/tfplan'
-            environmentServiceNameAzureRM: '$(ServiceConnection)'
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        buildType: 'current'
+        artifactName: 'qa-plan'
+        targetPath: '$(Pipeline.Workspace)/plan-qa'
 
-  - stage: Prod_stage
-    dependsOn: QA_Stage
-    condition: succeeded()
-    displayName: Pord_stage
-    variables:
-      ProdEnv: '$(System.DefaultWorkingDirectory)/env/prod'
+    - task: TerraformTask@5
+      displayName: qa terraform apply
+      inputs:
+        provider: 'azurerm'
+        command: 'apply'
+        workingDirectory: '$(QaEnv)'
+        commandOptions: '$(Pipeline.Workspace)/plan-qa/tfplan'
+        environmentServiceNameAzureRM: '$(ServiceConnection)'
 
-    jobs:
-      - job: Prod_plan
-        steps:
-        - template: templates/terraform-init.yml
-        - task: TerraformTask@5
-          displayName: terraform init
-          inputs:
-            provider: 'azurerm'
-            command: 'init'
-            workingDirectory: '$(ProdEnv)'
-            backendServiceArm: '$(ServiceConnection)'
-            backendAzureRmStorageAccountName: '$(StorageAccount)'
-            backendAzureRmContainerName: '$(Container)'
-            backendAzureRmKey: 'prod.tfstate'
-        - task: TerraformTask@5
-          displayName: terraform plan
-          inputs:
-            provider: 'azurerm'
-            command: 'plan'
-            workingDirectory: '$(ProdEnv)'
-            commandOptions: '-out=tfplan'
-            environmentServiceNameAzureRM: '$(ServiceConnection)'
+- stage: Prod_stage
+  dependsOn: QA_stage
+  condition: succeeded()
+  displayName: Prod_stage
+  variables:
+    ProdEnv: '$(System.DefaultWorkingDirectory)/env/prod'
 
-        - task: PublishPipelineArtifact@1
-          inputs:
-            targetPath: '$(ProdEnv)/tfplan'
-            artifact: 'prod-plan'
-            publishLocation: 'pipeline'
+  jobs:
+  - job: Prod_plan
+    steps:
+    - template: templates/terraform-plan.yml
+      parameters:
+        workingDirectory: '$(ProdEnv)'
+        backendKey: 'prod.tfstate'
+        serviceConnection: '$(ServiceConnection)'
+        storageAccount: '$(StorageAccount)'
+        container: '$(Container)'
+        artifactName: 'prod-plan'
 
-      - job: Prod_approval
-        dependsOn: Prod_plan
-        pool: server
-        steps:
-          - task: ManualValidation@1
-            displayName: prod validation
-            inputs:
-              notifyUsers: 'ankitg.2051@gmail.com'
+  - job: Prod_approval
+    dependsOn: Prod_plan
+    pool: server
+    steps:
+    - task: ManualValidation@1
+      displayName: prod validation
+      inputs:
+        notifyUsers: 'ankitg.2051@gmail.com'
 
-      - job: Prod_apply
-        dependsOn: Prod_approval
-        steps:
-        - template: templates/terraform-init.yml
-        - task: TerraformTask@5
-          displayName: terraform init
-          inputs:
-            provider: 'azurerm'
-            command: 'init'
-            workingDirectory: '$(ProdEnv)'
-            backendServiceArm: '$(ServiceConnection)'
-            backendAzureRmStorageAccountName: '$(StorageAccount)'
-            backendAzureRmContainerName: '$(Container)'
-            backendAzureRmKey: 'prod.tfstate'
+  - job: Prod_apply
+    dependsOn: Prod_approval
+    steps:
+    - task: TerraformInstaller@1
+      displayName: Terraform install
+      inputs:
+        terraformVersion: 'latest'
 
-        - task: DownloadPipelineArtifact@2
-          inputs:
-            buildType: 'current'
-            artifactName: 'prod-plan'
-            targetPath: '$(Pipeline.Workspace)/plan-prod'
-        - task: TerraformTask@5
-          displayName: prod terraform apply   
-          inputs:
-            provider: 'azurerm'
-            command: 'apply'
-            workingDirectory: '$(ProdEnv)'
-            commandOptions: '$(Pipeline.Workspace)/plan-prod/tfplan'
-            environmentServiceNameAzureRM: '$(ServiceConnection)'
+    - task: TerraformTask@5
+      displayName: terraform init
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '$(ProdEnv)'
+        backendServiceArm: '$(ServiceConnection)'
+        backendAzureRmStorageAccountName: '$(StorageAccount)'
+        backendAzureRmContainerName: '$(Container)'
+        backendAzureRmKey: 'prod.tfstate'
+
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        buildType: 'current'
+        artifactName: 'prod-plan'
+        targetPath: '$(Pipeline.Workspace)/plan-prod'
+
+    - task: TerraformTask@5
+      displayName: prod terraform apply
+      inputs:
+        provider: 'azurerm'
+        command: 'apply'
+        workingDirectory: '$(ProdEnv)'
+        commandOptions: '$(Pipeline.Workspace)/plan-prod/tfplan'
+        environmentServiceNameAzureRM: '$(ServiceConnection)'
