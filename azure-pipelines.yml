@@ -79,20 +79,25 @@ stages:
       inputs:
         notifyUsers: 'ankitg.2051@gmail.com'
 
-  - job: QA_apply
+  - deployment: QA_apply
+    displayName: QA apply
     dependsOn: QA_approval
-    steps:
-    - template: templates/terraform-apply.yml
-      parameters:
-        workingDirectory: '$(QaEnv)'
-        backendKey: 'qa.tfstate'
-        serviceConnection: '$(ServiceConnection)'
-        storageAccount: '$(StorageAccount)'
-        container: '$(Container)'
-        artifactName: 'qa-plan'
-        targetPath: '$(Pipeline.Workspace)/plan-qa'
-        envv: 'qa'
-        commandOptions: '$(Pipeline.Workspace)/plan-qa/tfplan'
+    environment: 'QA'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - template: templates/terraform-apply.yml
+            parameters:
+              workingDirectory: '$(QaEnv)'
+              backendKey: 'qa.tfstate'
+              serviceConnection: '$(ServiceConnection)'
+              storageAccount: '$(StorageAccount)'
+              container: '$(Container)'
+              artifactName: 'qa-plan'
+              targetPath: '$(Pipeline.Workspace)/plan-qa'
+              envv: 'qa'
+              commandOptions: '$(Pipeline.Workspace)/plan-qa/tfplan'
 
 - stage: Prod_stage
   dependsOn: QA_stage
