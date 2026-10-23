@@ -12,17 +12,65 @@ variables:
 
 stages:
 
+
 - stage: Security_Scan
   displayName: Gitleaks Secret Scan
+
   jobs:
   - job: Gitleaks
+    displayName: Scan Git History
     steps:
     - checkout: self
       fetchDepth: 0
 
+    # Step 1: Run Gitleaks and generate JSON report
     - powershell: |
-        gitleaks git --redact=100 --exit-code=1 .
-      displayName: Run Gitleaks
+        $ErrorActionPreference = 'Stop'
+
+        $reportDir = "$(Build.ArtifactStagingDirectory)"
+        $report = Join-Path $reportDir "gitleaks-report.json"
+
+        New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
+
+        # Ensure a report file exists even if Gitleaks cannot start
+        Set-Content -Path $report -Value "[]"
+
+        gitleaks git . `
+          --report-format json `
+          --report-path "$report" `
+          --redact=100 `
+          --exit-code=1
+
+        $scanExitCode = $LASTEXITCODE
+
+        Write-Host "Gitleaks exit code: $scanExitCode"
+        Write-Host "##vso[task.setvariable variable=GitleaksExitCode]$scanExitCode"
+
+        # Let the report publish before failing the job
+        exit 0
+      displayName: Run Gitleaks and Generate Report
+
+    # Step 2: Publish report even if the scan found a leak
+    - task: PublishPipelineArtifact@1
+      displayName: Publish Gitleaks Report
+      condition: always()
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)'
+        artifact: 'gitleaks-report'
+        publishLocation: 'pipeline'
+
+    # Step 3: Fail the job if Gitleaks reported a finding/error
+    - powershell: |
+        $scanExitCode = "$(GitleaksExitCode)"
+
+        if ($scanExitCode -ne "0") {
+          Write-Error "Gitleaks failed or detected a possible secret. Review the report artifact."
+          exit 1
+        }
+
+        Write-Host "Gitleaks scan passed."
+      displayName: Enforce Gitleaks Result
+      condition: always()
 
 
 - stage: Dev_stage
