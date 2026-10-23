@@ -9,9 +9,26 @@ variables:
   StorageAccount: 'commonstgoct2026'
   Container: 'contstore'
 
+
 stages:
+
+- stage: Security_Scan
+  displayName: Gitleaks Secret Scan
+  jobs:
+  - job: Gitleaks
+    steps:
+    - checkout: self
+      fetchDepth: 0
+
+    - powershell: |
+        gitleaks git --redact=100 --exit-code=1 .
+      displayName: Run Gitleaks
+
+
 - stage: Dev_stage
   displayName: Dev_stage
+  dependsOn: Security_Scan
+  condition: succeeded()
   variables:
     DevEnv: '$(System.DefaultWorkingDirectory)/env/dev'
 
