@@ -23,7 +23,7 @@ stages:
     - checkout: self
       fetchDepth: 0
 
-    # Step 1: Run Gitleaks and generate JSON reports
+    # Step 1: Run Gitleaks and generate JSON reportss
     - powershell: |
         $ErrorActionPreference = 'Stop'
 
